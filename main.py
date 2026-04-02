@@ -15,10 +15,12 @@ try:
 except FileNotFoundError:
     raise FileNotFoundError("prompt_template.txt not found. Please create it in the same directory as main.py.")
 
+
 class LLMResponse(BaseModel):
     index: int
     equivalent: bool
     reasoning: str
+
 
 def get_segments(reference_string: str, predicted_string: str, key: Any) -> List[Dict[str, Any]]:
     try:
@@ -44,11 +46,13 @@ def get_segments(reference_string: str, predicted_string: str, key: Any) -> List
         logger.error(f"Error in get_segments for key {key}: {e}")
         return []
 
+
 def build_prompt(segment_pair: Dict[str, str]) -> str:
     prompt = PROMPT_TEMPLATE + "\n\n**INPUT:**\n"
     json_objects = [{"index": 0, "reference": segment_pair["reference"], "prediction": segment_pair["prediction"]}]
     prompt += json.dumps(json_objects, indent=2, ensure_ascii=False)
     return prompt
+
 
 def load_and_validate_dataset(
     dataset_path: str, required_cols: set
@@ -70,6 +74,7 @@ def load_and_validate_dataset(
     
     return df
 
+
 def normalize_and_calculate_original_error_rates(df: pd.DataFrame, ref_col: str, pred_col: str, lang_col: str) -> pd.DataFrame:
     normalizer = IndicNormalizer()
     df["norm_reference"] = normalizer.normalize_texts(df[ref_col].astype(str).to_list(), df[lang_col].astype(str).to_list())
@@ -79,6 +84,7 @@ def normalize_and_calculate_original_error_rates(df: pd.DataFrame, ref_col: str,
     df["original_cer"] = [cer(ref, pred) for ref, pred in zip(df["norm_reference"], df["norm_prediction"])]
     
     return df
+
 
 def extract_unique_segments(df: pd.DataFrame) -> Tuple[Dict[int, List[Dict]], Dict[Tuple[str, str], List[Dict]]]:
     row_segment_map = {}
@@ -95,6 +101,7 @@ def extract_unique_segments(df: pd.DataFrame) -> Tuple[Dict[int, List[Dict]], Di
                 unique_segments_to_process[segment_pair].append({"row_idx": idx, "segment_idx": segment["segment_idx"]})
     
     return row_segment_map, unique_segments_to_process
+
 
 def query_llm_for_equivalence(
     unique_segments: Dict[Tuple[str, str], List[Dict]],
@@ -148,6 +155,7 @@ def query_llm_for_equivalence(
     all_successful = successful_from_cache + newly_successful
     return all_successful, failed
 
+
 def process_llm_responses(successful_responses: list, unique_segments_to_process: dict) -> Tuple[Dict[Tuple[int, int], bool], List[Dict]]:
     llm_verdicts = {}
     log_records = []
@@ -176,6 +184,7 @@ def process_llm_responses(successful_responses: list, unique_segments_to_process
     
     return equivalent_flags, log_records
 
+
 def reconstruct_and_score(df: pd.DataFrame, row_segment_map: dict, equivalent_flags: dict) -> pd.DataFrame:
     corrected_predictions = []
     corrected_references = []
@@ -203,6 +212,7 @@ def reconstruct_and_score(df: pd.DataFrame, row_segment_map: dict, equivalent_fl
     df["corrected_cer"] = [cer(ref, pred) for ref, pred in zip(df["corrected_reference"], df["corrected_prediction"])]
     
     return df
+
 
 def save_outputs(df: pd.DataFrame, logs: List[Dict], failed: List[Dict], outputs_dir: Path, sheet_name: str, worksheet_prefix: str, creds_path: Path):
     outputs_dir.mkdir(parents=True, exist_ok=True)
@@ -250,13 +260,6 @@ def process_dataset_with_predictions(
         location=gemini_location,
     )
 
-    # api = ChatCompletionsAPI(
-    #     model_name="sarvam-m",
-    #     api_key="SARVAM-M-API-KEY",
-    #     base_url="https://api.sarvam.ai/v1/",
-    #     max_retries=0
-    # )
-    
     required_cols = {reference_col_name, predicted_col_name, audio_filepath_col_name, language_col_name}
     df = load_and_validate_dataset(dataset_path, required_cols)
     df = normalize_and_calculate_original_error_rates(df, reference_col_name, predicted_col_name, language_col_name)
@@ -279,7 +282,7 @@ def process_dataset_with_predictions(
 
 if __name__ == "__main__":
     process_dataset_with_predictions(
-        dataset_path = "/path/to/path_with_predictions.csv", 
+        dataset_path="/path/to/path_with_predictions.csv", 
         reference_col_name="transcription", 
         predicted_col_name="prediction", 
         audio_filepath_col_name="audio_filepath",

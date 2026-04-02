@@ -11,3 +11,13 @@ wheels/
 
 inputs/
 outputs/
+
+# Credentials and secrets
+.env
+.env.*
+creds*.json
+*credentials*.json
+*service_account*.json
+*.key
+*.pem
+secrets/
